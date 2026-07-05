@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/mentor")
@@ -26,7 +27,7 @@ public class MentorController {
     private final UserRepository userRepository;
 
     @PostMapping("/ask")
-    public ResponseEntity<AskResponse> ask(@Valid @RequestBody AskRequest request) {
+    public ResponseEntity<?> ask(@Valid @RequestBody AskRequest request) {
         String mode = request.getMode() != null ? request.getMode() : "concept";
         String lang = request.getLanguage() != null ? request.getLanguage() : "General";
         
@@ -58,24 +59,33 @@ public class MentorController {
                 """.formatted(lang, request.getQuestion());
         }
 
-        String answer = geminiService.generate(prompt);
+        String answer;
+        try {
+            answer = geminiService.generate(prompt);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(
+                new AskResponse("⚠️ AI service is temporarily unavailable. Error: " + e.getMessage())
+            );
+        }
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email).orElseThrow();
-
-        Message message = Message.builder()
-                .user(user)
-                .feature("mentor")
-                .question(request.getQuestion())
-                .answer(answer)
-                .build();
-        messageRepository.save(message);
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        
+        if (userOpt.isPresent()) {
+            Message message = Message.builder()
+                    .user(userOpt.get())
+                    .feature("mentor")
+                    .question(request.getQuestion())
+                    .answer(answer)
+                    .build();
+            messageRepository.save(message);
+        }
 
         return ResponseEntity.ok(new AskResponse(answer));
     }
 
     @PostMapping("/doubt")
-    public ResponseEntity<AskResponse> solveDoubt(@Valid @RequestBody AskRequest request) {
+    public ResponseEntity<?> solveDoubt(@Valid @RequestBody AskRequest request) {
         String prompt = """
                 You are an expert programming mentor specializing in helping students overcome coding doubts and errors.
                 A student has the following doubt or problem: "%s"
@@ -89,29 +99,42 @@ public class MentorController {
                 Keep your tone encouraging and educational.
                 """.formatted(request.getQuestion());
 
-        String answer = geminiService.generate(prompt);
+        String answer;
+        try {
+            answer = geminiService.generate(prompt);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(
+                new AskResponse("⚠️ AI service is temporarily unavailable. Error: " + e.getMessage())
+            );
+        }
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email).orElseThrow();
+        Optional<User> userOpt = userRepository.findByEmail(email);
 
-        Message message = Message.builder()
-                .user(user)
-                .feature("doubt")
-                .question(request.getQuestion())
-                .answer(answer)
-                .build();
-        messageRepository.save(message);
+        if (userOpt.isPresent()) {
+            Message message = Message.builder()
+                    .user(userOpt.get())
+                    .feature("doubt")
+                    .question(request.getQuestion())
+                    .answer(answer)
+                    .build();
+            messageRepository.save(message);
+        }
 
         return ResponseEntity.ok(new AskResponse(answer));
     }
 
     @GetMapping("/history")
-    public ResponseEntity<List<HistoryItem>> history() {
+    public ResponseEntity<?> history() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findByEmail(email).orElseThrow();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
 
         List<HistoryItem> history = messageRepository
-                .findByUserIdAndFeatureOrderByCreatedAtDesc(user.getId(), "mentor")
+                .findByUserIdAndFeatureOrderByCreatedAtDesc(userOpt.get().getId(), "mentor")
                 .stream()
                 .map(m -> new HistoryItem(m.getId(), m.getQuestion(), m.getAnswer(), m.getCreatedAt()))
                 .toList();
