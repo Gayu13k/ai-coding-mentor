@@ -1,0 +1,19 @@
+# Production profile — activated by setting SPRING_PROFILES_ACTIVE=prod on Railway
+# Railway PostgreSQL plugin provides DATABASE_URL in this format:
+# postgresql://user:password@host:port/dbname
+# Spring Boot needs it as: jdbc:postgresql://...
+# We use the JDBC_DATABASE_URL variable which Railway also provides in JDBC format.
+
+spring:
+  datasource:
+    url: ${JDBC_DATABASE_URL}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+
+  h2:
+    console:
+      enabled: false
