@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-mentor-db
+    restart: always
+    environment:
+      POSTGRES_DB: ai_mentor_db
+      POSTGRES_USER: mentor_user
+      POSTGRES_PASSWORD: mentor_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ../backend
+    container_name: ai-mentor-backend
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ai_mentor_db
+      SPRING_DATASOURCE_USERNAME: mentor_user
+      SPRING_DATASOURCE_PASSWORD: mentor_pass
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ../frontend
+    container_name: ai-mentor-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
