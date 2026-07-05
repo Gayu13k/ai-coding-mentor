@@ -31,5 +31,5 @@ jwt:
   expiration: 86400000  # 24 hours in ms
 
 gemini:
-  api-key: ${GEMINI_API_KEY:AQ.Ab8RN6LPjtJHCvD-w5pl648l8WHkXX5nlBuadkr4en11StBGyg}
+  api-key: ${GEMINI_API_KEY:}
   model: gemini-2.5-flash
