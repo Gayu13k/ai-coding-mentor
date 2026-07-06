@@ -44,8 +44,9 @@ public class DatabaseConfig {
                 URI uri = new URI(normalised);
                 String[] userInfo = uri.getUserInfo().split(":", 2);
 
+                String portStr = uri.getPort() != -1 ? ":" + uri.getPort() : "";
                 String jdbcUrl = "jdbc:postgresql://" + uri.getHost()
-                        + ":" + uri.getPort()
+                        + portStr
                         + uri.getPath()
                         + "?sslmode=require";
 
