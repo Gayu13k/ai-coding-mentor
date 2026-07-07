@@ -24,13 +24,30 @@ public class GeminiService {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public String generate(String prompt) {
+
         String url = "/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+
+        // ===== DEBUG LOGS =====
+        System.out.println("========================================");
+        System.out.println("Gemini Debug");
+        System.out.println("Model  : " + model);
+        System.out.println("URL    : " + url);
+        System.out.println("Prompt : " + prompt);
+
+        if (apiKey != null && apiKey.length() > 10) {
+            System.out.println("API Key: " + apiKey.substring(0, 10) + "...");
+        } else {
+            System.out.println("API Key is missing!");
+        }
+        System.out.println("========================================");
 
         Map<String, Object> body = Map.of(
                 "contents", new Object[]{
-                        Map.of("parts", new Object[]{
-                                Map.of("text", prompt)
-                        })
+                        Map.of(
+                                "parts", new Object[]{
+                                        Map.of("text", prompt)
+                                }
+                        )
                 },
                 "generationConfig", Map.of(
                         "temperature", 0.7,
@@ -40,6 +57,7 @@ public class GeminiService {
         );
 
         try {
+
             String response = webClient.post()
                     .uri(url)
                     .bodyValue(body)
@@ -47,13 +65,31 @@ public class GeminiService {
                     .bodyToMono(String.class)
                     .block();
 
+            System.out.println("Gemini Response:");
+            System.out.println(response);
+
             JsonNode root = mapper.readTree(response);
-            return root.path("candidates").get(0)
-                    .path("content").path("parts").get(0)
-                    .path("text").asText();
+
+            JsonNode candidates = root.path("candidates");
+
+            if (candidates.isMissingNode() || candidates.isEmpty()) {
+                throw new RuntimeException("No candidates returned from Gemini.\nResponse:\n" + response);
+            }
+
+            return candidates.get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
 
         } catch (Exception e) {
-            throw new RuntimeException("Gemini API call failed: " + e.getMessage(), e);
+
+            System.err.println("========== GEMINI ERROR ==========");
+            e.printStackTrace();
+            System.err.println("==================================");
+
+            throw new RuntimeException("Gemini API call failed", e);
         }
     }
 }

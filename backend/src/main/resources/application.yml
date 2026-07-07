@@ -25,5 +25,4 @@ jwt:
 
 gemini:
   api-key: ${GEMINI_API_KEY:}
-  model: gemini-2.5-flashhave u walhtroughed the website and checked all the operation is working in backend 
-  
+  model: gemini-2.5-flash
